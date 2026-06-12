@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>EYEWEAR // PARTICLE SHIFT</title>
+<link rel="preload" href="models/glasses1.glb" as="fetch" crossorigin="anonymous" />
 <style>
   @font-face {
     font-family: 'Macan Mono Trial';
@@ -446,7 +447,7 @@
 <nav class="top-bar">
   <div class="top-bar-inner">
     <div class="t-left">
-      <div class="t-item t-item--shop">SHOP</div>
+      <div class="t-item t-item--shop">HOME</div>
       <div class="t-item">JOURNAL</div>
       <div class="t-item">SEARCH</div>
     </div>
@@ -537,10 +538,6 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 /* ═══════════════════ CONFIG ═══════════════════ */
 const MODELS = [
@@ -654,9 +651,6 @@ controls.maxDistance     = 9;
 controls.maxPolarAngle   = Math.PI * 0.72;
 controls.minPolarAngle   = Math.PI * 0.22;
 
-const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
-composer.addPass(new OutputPass());
 
 const stage = new THREE.Group();
 scene.add(stage);
@@ -761,12 +755,11 @@ particles.frustumCulled = false;
 stage.add(particles);
 
 /* ═══════════════════ LOAD ALL ═══════════════════ */
-const loads = MODELS.map(cfg => new Promise((res, rej) => {
-  gltfLoader.load(cfg.url, gltf => res({ cfg, model: gltf.scene }), undefined, rej);
-}));
-
-Promise.all(loads).then(results => {
-  results.forEach(({ cfg, model }) => {
+new Promise((res, rej) => {
+  gltfLoader.load(MODELS[0].url, gltf => res(gltf.scene), undefined, rej);
+}).then(baseScene => {
+  MODELS.forEach(cfg => {
+    const model  = baseScene.clone(true);
     const group  = normalizeIntoGroup(model);
     if (cfg.tint) tintGroup(group, cfg.tint);
     const points = samplePoints(group, PARTICLES);
@@ -922,7 +915,7 @@ function tick() {
 
   updateShift(performance.now());
   controls.update();
-  composer.render();
+  renderer.render(scene, camera);
 }
 tick();
 
@@ -930,7 +923,6 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-  composer.setSize(window.innerWidth, window.innerHeight);
 });
 
 const clockEl = document.getElementById('tClock');
@@ -943,6 +935,13 @@ function updateClock() {
 }
 updateClock();
 setInterval(updateClock, 1000);
+
+/* nav scramble on hover */
+document.querySelectorAll('.t-item:not(#tClock)').forEach(el => {
+  const orig = el.textContent.trim();
+  if (!orig) return;
+  el.addEventListener('mouseenter', () => scrambleText(el, orig));
+});
 
 /* shared accent color for the dithered background — lerped each frame */
 const _bgCol = { r: 1.0, g: 0.384, b: 0.0, tr: 1.0, tg: 0.384, tb: 0.0 };

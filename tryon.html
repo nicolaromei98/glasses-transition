@@ -573,7 +573,7 @@
 <nav class="top-bar">
   <div class="top-bar-inner">
     <div class="t-left">
-      <a class="t-item t-item--shop" href="index.html">SHOP</a>
+      <a class="t-item t-item--shop" href="index.html">HOME</a>
       <div class="t-item">JOURNAL</div>
       <div class="t-item">SEARCH</div>
     </div>
@@ -768,24 +768,22 @@ function tintModel(root, hexColor) {
   });
 }
 
-function loadModel(cfg) {
-  return new Promise((res, rej) => gltfLoader.load(cfg.url, g => {
-    const model = g.scene;
-    if (cfg.tint != null) tintModel(model, cfg.tint);
-    const box    = new THREE.Box3().setFromObject(model);
-    const size   = box.getSize(new THREE.Vector3());
-    const center = box.getCenter(new THREE.Vector3());
-    const inner  = new THREE.Group();
-    inner.add(model);
-    const s = 1 / size.x;
-    inner.scale.setScalar(s);
-    inner.position.copy(center).multiplyScalar(-s);
-    const slot = new THREE.Group();
-    slot.add(inner);
-    slot.userData.halfDepth = size.z / (2 * size.x);
-    slot.visible = false;
-    res(slot);
-  }, undefined, rej));
+function makeSlot(baseScene, cfg) {
+  const model  = baseScene.clone(true);
+  if (cfg.tint != null) tintModel(model, cfg.tint);
+  const box    = new THREE.Box3().setFromObject(model);
+  const size   = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const inner  = new THREE.Group();
+  inner.add(model);
+  const s = 1 / size.x;
+  inner.scale.setScalar(s);
+  inner.position.copy(center).multiplyScalar(-s);
+  const slot = new THREE.Group();
+  slot.add(inner);
+  slot.userData.halfDepth = size.z / (2 * size.x);
+  slot.visible = false;
+  return slot;
 }
 
 async function initTracker() {
@@ -818,15 +816,16 @@ async function initCamera() {
 
 let landmarker = null;
 let progress = 0;
-const bump = () => setBar(Math.min(progress += 25, 95));
+const bump = () => setBar(Math.min(progress += 33, 95));
 
 async function init() {
   MODELS.forEach((_, i) => localStorage.removeItem('vto-fit-' + i));
   try {
-    const [slots, lm] = await Promise.all([
-      Promise.all(MODELS.map(m => loadModel(m).then(s => (bump(), s)))),
+    const [baseScene, lm] = await Promise.all([
+      new Promise((res, rej) => gltfLoader.load(MODELS[0].url, g => (bump(), res(g.scene)), undefined, rej)),
       initTracker().then(l => (bump(), l)),
     ]);
+    const slots = MODELS.map(cfg => makeSlot(baseScene, cfg));
     slots.forEach(s => { anchor.add(s); glassesSlots.push(s); });
     landmarker = lm;
     await initCamera();
@@ -1096,6 +1095,13 @@ function updateClock() {
 }
 updateClock();
 setInterval(updateClock, 1000);
+
+/* nav scramble on hover */
+document.querySelectorAll('.t-item:not(#tClock):not(.t-status)').forEach(el => {
+  const orig = el.textContent.trim();
+  if (!orig) return;
+  el.addEventListener('mouseenter', () => scrambleText(el, orig));
+});
 
 init();
 </script>
