@@ -287,29 +287,113 @@
     border-color: rgba(255,255,255,0.45);
   }
 
-  /* VIRTUAL TRY-ON — orange */
-  .b-tryon {
-    flex: 0 0 auto;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 14px clamp(10px, 2.2vw, 50px) 14px 10px;
-    background: #FF6200;
-    backdrop-filter: blur(7px);
-    cursor: pointer;
+  /* ─── BUTTON-006 base ─── */
+  .button-006 {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    background-color: transparent;
+    outline-style: none;
+    padding: 0;
+    line-height: 1;
+    text-decoration: none;
+    display: inline-grid;
+    position: relative;
+    transition: scale 0.15s var(--button-006-ease-click, cubic-bezier(.4,0,.2,1));
+  }
+  .button-006::after {
+    content: '';
+    display: block;
+    position: absolute;
+    inset: var(--button-006-focus-inset, -0.125em);
+    border-radius: var(--button-006-border-radius, 0);
+    transition: box-shadow 0.3s var(--button-006-ease-focus, cubic-bezier(.32,.72,0,1));
+    pointer-events: none;
+    z-index: 1;
+  }
+  .button-006:is(:focus-visible)::after {
+    box-shadow: 0 0 0 0.125em var(--button-006-color-focus, #FF6200);
+  }
+  .button-006:active {
+    scale: var(--button-006-click-scale, 0.98 0.96);
+  }
+  .button-006__hover {
+    pointer-events: none;
+    color: var(--button-006-hover-color);
+    z-index: 2;
+    grid-area: 1 / 1;
+    display: grid;
+    clip-path: polygon(0% 50%, 100% 50%, 100% 50%, 0% 50%);
+    transition: clip-path 0.375s var(--button-006-ease-hover, cubic-bezier(.675,.15,.1,1));
+  }
+  .button-006__hover .button-006__text {
+    scale: var(--button-006-hover-text-scale, 0.9);
+    opacity: 0;
+    transition: scale 0.35s var(--button-006-ease-hover, cubic-bezier(.675,.15,.1,1)),
+                opacity 0.15s 0.05s ease-out;
+  }
+  .button-006__default {
+    pointer-events: none;
+    color: var(--button-006-color);
+    grid-area: 1 / 1;
+    display: grid;
+  }
+  .button-006__default .button-006__text {
+    scale: 1;
+    transition: scale 0.35s var(--button-006-ease-hover, cubic-bezier(.675,.15,.1,1));
+  }
+  .button-006__text {
+    padding: var(--button-006-padding, 0.75em 1em);
+    z-index: 1;
+    grid-area: 1 / 1;
     white-space: nowrap;
+  }
+  .button-006__bg {
+    border-radius: var(--button-006-border-radius, 0);
+    grid-area: 1 / 1;
+    place-self: stretch;
+  }
+  .button-006__bg.is--hover  { background-color: var(--button-006-hover-color-background); }
+  .button-006__bg.is--default { background-color: var(--button-006-color-background); }
+
+  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    .button-006:is(:hover,:focus-visible) .button-006__hover {
+      clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+      transition: clip-path 0.425s 0.05s var(--button-006-ease-hover, cubic-bezier(.675,.15,.1,1));
+    }
+    .button-006:is(:hover,:focus-visible) .button-006__hover .button-006__text {
+      scale: 1;
+      opacity: 1;
+      transition: scale 0.35s 0.1s var(--button-006-ease-hover, cubic-bezier(.675,.15,.1,1)),
+                  opacity 0.15s 0.15s ease-out;
+    }
+    .button-006:is(:hover,:focus-visible) .button-006__default .button-006__text {
+      scale: var(--button-006-default-text-scale, 1.05);
+      transition: scale 0.35s 0.05s var(--button-006-ease-hover, cubic-bezier(.675,.15,.1,1));
+    }
+  }
+
+  /* VIRTUAL TRY-ON — instance */
+  .b-tryon {
+    --button-006-color: #fff;
+    --button-006-color-background: #FF6200;
+    --button-006-hover-color: #FF6200;
+    --button-006-hover-color-background: #fff;
+    --button-006-color-focus: #FF6200;
+    --button-006-border-radius: 0;
+    --button-006-padding: 12px clamp(10px, 2.2vw, 50px) 12px 10px;
+    --button-006-click-scale: 0.98 0.96;
+    --button-006-default-text-scale: 1.05;
+    --button-006-hover-text-scale: 0.95;
+    --button-006-ease-hover: cubic-bezier(0.675, 0.15, 0.1, 1);
+    --button-006-ease-click: cubic-bezier(0.4, 0, 0.2, 1);
+    --button-006-ease-focus: cubic-bezier(0.32, 0.72, 0, 1);
+    flex: 0 0 auto;
     font-family: 'Macan Mono Trial', monospace;
     font-size: 12px;
     letter-spacing: 0.06em;
-    color: #fff;
-    border: none;
-    outline: none;
-    text-decoration: none;
-    transition: filter 0.25s;
-    user-select: none;
+    cursor: pointer;
   }
-  .b-tryon:hover { filter: brightness(1.15); }
 
   /* ADD TO BAG */
   .b-bag {
@@ -424,7 +508,16 @@
     <div class="model-chips" id="modelChips"></div>
   </div>
 
-  <a class="b-tryon" href="tryon.html">VIRTUAL TRY ON</a>
+  <a data-button-006="" href="tryon.html" class="button-006 b-tryon">
+    <span class="button-006__hover">
+      <span class="button-006__text">VIRTUAL TRY ON</span>
+      <span class="button-006__bg is--hover"></span>
+    </span>
+    <span class="button-006__default">
+      <span aria-hidden="true" class="button-006__text">VIRTUAL TRY ON</span>
+      <span class="button-006__bg is--default"></span>
+    </span>
+  </a>
 
 </div>
 
