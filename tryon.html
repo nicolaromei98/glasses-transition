@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EYEWEAR // VIRTUAL TRY-ON</title>
+<style>
+  @font-face {
+    font-family: 'Macan Mono Trial';
+    src: url('fonts/Macan-Mono-Trial-Regular.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: 'Macan Mono Trial';
+    src: url('fonts/Macan-Mono-Trial-Light.otf') format('opentype');
+    font-weight: 300;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: 'Macan Mono Trial';
+    src: url('fonts/Macan-Mono-Trial-Bold.otf') format('opentype');
+    font-weight: 700;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: 'Macan Mono Stencil Trial';
+    src: url('fonts/Macan-Mono-Stencil-Trial-Light.otf') format('opentype');
+    font-weight: 300;
+    font-style: normal;
+  }
+
+  :root { --accent: #FF6200; }
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; background: #070707; }
+  body { font-family: 'Macan Mono Trial', monospace; color: #fff; }
+
+  #stage { position: fixed; inset: 0; overflow: hidden; }
+  #video, #gl { position: absolute; transform: scaleX(-1); }
+
+  .vignette {
+    position: fixed; inset: 0; pointer-events: none; z-index: 3;
+    background: radial-gradient(ellipse 80% 70% at 50% 48%, transparent 40%, rgba(0,0,0,.55) 100%);
+  }
+
+  /* ─── TOP BAR ─── */
+  .top-bar {
+    position: fixed;
+    top: 12px;
+    left: 10px;
+    right: 10px;
+    height: 36px;
+    background: rgba(255,255,255,0.16);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    pointer-events: auto;
+  }
+  .top-bar-inner {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    height: 16px;
+  }
+  .t-left, .t-right {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: clamp(10px, 2vw, 28px);
+  }
+  .t-right { justify-content: flex-end; }
+  .t-item {
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 16px;
+    color: #fff;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    user-select: none;
+    white-space: nowrap;
+    text-decoration: none;
+  }
+  .t-item--shop {
+    background: #000;
+    padding: 0 10px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+  }
+  .t-glasses {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* face status chip */
+  .t-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: rgba(255,255,255,0.5);
+    transition: color 0.3s;
+  }
+  .t-status.ok { color: #FF6200; }
+  .t-led {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    transition: background 0.3s, box-shadow 0.3s;
+    flex-shrink: 0;
+  }
+  .t-status.ok .t-led {
+    background: #FF6200;
+    box-shadow: 0 0 8px #FF6200;
+  }
+
+  /* ─── SIDE ARROWS ─── */
+  .nav-arrow {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    cursor: pointer;
+    width: 44px; height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.03);
+    transition: border-color 0.3s, background 0.3s;
+    pointer-events: auto;
+  }
+  .nav-arrow:hover { border-color: rgba(255,100,0,0.5); background: rgba(255,98,0,0.08); }
+  .nav-arrow svg { width: 18px; height: 18px; stroke: rgba(255,255,255,0.6); stroke-width: 1.5; fill: none; }
+  #prev { left: 18px; }
+  #next { right: 18px; }
+
+  /* ─── PRODUCT NAME ─── */
+  .product-title-wrap {
+    position: fixed;
+    left: 20px;
+    bottom: 58px;
+    z-index: 10;
+    pointer-events: none;
+  }
+  #mName {
+    font-family: 'Macan Mono Stencil Trial', monospace;
+    font-size: clamp(22px, 3.2vw, 52px);
+    font-weight: 300;
+    letter-spacing: 0.10em;
+    color: #fff;
+    text-transform: uppercase;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  /* ─── DISTANCE GUIDE ─── */
+  #distGuide {
+    position: fixed;
+    top: 68px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 15;
+    pointer-events: none;
+    min-width: 300px;
+    padding: 16px 24px 13px;
+    background: rgba(7,7,7,0.96);
+    border: 1px solid rgba(255,98,0,0.6);
+    transition: opacity 0.18s;
+  }
+  #distGuide.hidden { opacity: 0; }
+  #distTop {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  #distMsg {
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 11px;
+    letter-spacing: 0.32em;
+    color: #FF6200;
+    white-space: nowrap;
+  }
+  #distVal {
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: rgba(255,255,255,0.55);
+    white-space: nowrap;
+  }
+  #distTrack {
+    width: 100%;
+    height: 2px;
+    background: rgba(255,255,255,0.1);
+    position: relative;
+    margin-bottom: 6px;
+  }
+  #distZone {
+    position: absolute;
+    /* 60-100 cm on 20-150 cm scale → 30.8 % to 61.5 % */
+    left: 30.8%;
+    width: 30.7%;
+    top: -1px; bottom: -1px;
+    background: rgba(255,98,0,0.18);
+    border-left:  1px solid rgba(255,98,0,0.55);
+    border-right: 1px solid rgba(255,98,0,0.55);
+  }
+  #distCursor {
+    position: absolute;
+    width: 8px; height: 8px;
+    background: #FF6200;
+    box-shadow: 0 0 8px #FF6200;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    transition: left 0.12s;
+  }
+  #distBarLabels {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 8px;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.2);
+  }
+
+  /* ─── BOTTOM BAR ─── */
+  .bottom-bar {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    height: 36px;
+    z-index: 10;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: clamp(4px, 0.6vw, 11px);
+    pointer-events: auto;
+  }
+  .b-info {
+    flex: 1 1 auto;
+    min-width: 0;
+    background: rgba(255,255,255,0.16);
+    height: 36px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 10px clamp(8px, 1.2vw, 20px);
+    gap: clamp(6px, 1.2vw, 22px);
+  }
+  .info-pair {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: clamp(8px, 1.6vw, 32px);
+    flex-shrink: 1;
+  }
+  .i-label {
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 16px;
+    color: #fff;
+    white-space: nowrap;
+  }
+  .i-val {
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 16px;
+    color: rgba(255,255,255,0.5);
+    white-space: nowrap;
+    text-transform: uppercase;
+    min-width: 0;
+  }
+  .b-btn {
+    flex: 0 0 auto;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    padding: 14px clamp(10px, 2.2vw, 50px) 14px 10px;
+    background: rgba(255,255,255,0.14);
+    backdrop-filter: blur(7px);
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: #fff;
+    border: none;
+    outline: none;
+    transition: background 0.25s;
+    user-select: none;
+  }
+  .b-btn:hover { background: rgba(255,255,255,0.22); }
+
+  /* MORE MODELS */
+  .b-models {
+    flex: 0 0 auto;
+    height: 36.25px;
+    display: flex;
+    align-items: center;
+    padding: 9px clamp(6px, 0.7vw, 10px);
+    gap: clamp(6px, 0.7vw, 10px);
+    background: rgba(255,255,255,0.14);
+    backdrop-filter: blur(7px);
+    border: none;
+    outline: none;
+  }
+  .models-label-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .models-txt {
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: #fff;
+    white-space: nowrap;
+  }
+  .models-count {
+    position: absolute;
+    top: -7px; right: -14px;
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 8px;
+    line-height: 1;
+    color: #fff;
+    opacity: 0.5;
+  }
+  .model-chips {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 18px;
+  }
+  .model-chip {
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    color: rgba(255,255,255,0.45);
+    white-space: nowrap;
+    cursor: pointer;
+    padding: 2px 6px;
+    border: 1px solid rgba(255,255,255,0.15);
+    transition: color 0.25s, border-color 0.25s;
+    text-transform: uppercase;
+  }
+  .model-chip:hover { color: #FF6200; border-color: #FF6200; }
+
+  /* PHOTO button */
+  .b-photo {
+    flex: 0 0 auto;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px clamp(10px, 2.2vw, 50px) 14px 10px;
+    background: #FF6200;
+    backdrop-filter: blur(7px);
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: #fff;
+    border: none;
+    outline: none;
+    transition: filter 0.25s;
+    user-select: none;
+  }
+  .b-photo:hover { filter: brightness(1.15); }
+
+  /* ─── FIT PANEL (keyboard-only access via T) ─── */
+  #tune {
+    position: fixed;
+    right: 18px;
+    bottom: 58px;
+    z-index: 20;
+    width: 230px;
+    background: rgba(10,10,12,0.88);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,0.12);
+    padding: 18px;
+    display: none;
+    pointer-events: auto;
+  }
+  #tune.open { display: block; }
+  #tune h3 {
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: #FF6200;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+  }
+  #tune label {
+    display: block;
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: rgba(255,255,255,0.5);
+    margin: 10px 0 4px;
+    text-transform: uppercase;
+  }
+  #tune input[type=range] { width: 100%; accent-color: #FF6200; }
+  #tune .chk {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: rgba(255,255,255,0.5);
+  }
+  #tune .chk label { margin: 0; }
+  #tune .t-reset {
+    margin-top: 14px;
+    width: 100%;
+    padding: 8px;
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.14);
+    cursor: pointer;
+    transition: border-color 0.25s;
+  }
+  #tune .t-reset:hover { border-color: #FF6200; color: #FF6200; }
+
+  /* Loader */
+  #overlay {
+    position: fixed; inset: 0; z-index: 30; background: #070707;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 20px; text-align: center; padding: 24px; transition: opacity .7s;
+  }
+  #overlay.done { opacity: 0; pointer-events: none; }
+  .l-title { font-family: 'Macan Mono Trial', monospace; font-size: 11px; letter-spacing: .5em; color: #9aa3b5; }
+  .l-sub { font-family: 'Macan Mono Trial', monospace; font-size: 10px; letter-spacing: .2em; color: #566; line-height: 2; }
+  .l-bar { width: 240px; height: 2px; background: rgba(255,255,255,.08); }
+  .l-bar i { display: block; height: 100%; width: 0%; background: #FF6200; box-shadow: 0 0 14px #FF6200; transition: width .25s; }
+
+  #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 9; transition: opacity .4s; }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <video id="video" autoplay playsinline muted></video>
+</div>
+<div class="vignette"></div>
+<div id="flash"></div>
+
+<div id="overlay">
+  <div class="l-title">EYEWEAR&nbsp;/&nbsp;/&nbsp;VIRTUAL&nbsp;TRY-ON</div>
+  <div class="l-bar"><i id="loadbar"></i></div>
+  <div class="l-sub" id="overlaymsg">INITIALIZING CAMERA &amp; FACE TRACKER…</div>
+</div>
+
+<!-- Distance guide -->
+<div id="distGuide" class="hidden">
+  <div id="distTop">
+    <span id="distMsg">STEP BACK</span>
+    <span id="distVal"></span>
+  </div>
+  <div id="distTrack">
+    <div id="distZone"></div>
+    <div id="distCursor"></div>
+  </div>
+  <div id="distBarLabels">
+    <span>20 CM</span>
+    <span>OPTIMAL  60–100 CM</span>
+    <span>150 CM</span>
+  </div>
+</div>
+
+<!-- TOP BAR -->
+<nav class="top-bar">
+  <div class="top-bar-inner">
+    <div class="t-left">
+      <a class="t-item t-item--shop" href="index.html">SHOP</a>
+      <div class="t-item">JOURNAL</div>
+      <div class="t-item">SEARCH</div>
+    </div>
+    <div class="t-glasses">
+      <svg width="47" height="10" viewBox="0 0 47 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M36.4395 0C42.0264 0 46.5557 2.09423 46.5557 4.67773C46.5557 7.26124 42.0264 9.35547 36.4395 9.35547C33.6911 9.35541 31.1991 8.84838 29.3763 8.02564C27.4947 7.17636 25.2334 6.30957 23.1689 6.30957C21.1971 6.30952 19.0824 7.13782 17.2954 7.97138C15.4634 8.82597 12.9239 9.35547 10.1162 9.35547C4.52925 9.35546 0 7.26124 0 4.67773C0 2.09423 4.52925 7.62687e-06 10.1162 0C12.9247 0 15.4651 0.529646 17.2975 1.38453C19.0838 2.21794 21.1978 3.04692 23.1689 3.04688C25.2327 3.04688 27.4933 2.17941 29.3742 1.33027C31.1974 0.50724 33.6903 5.62936e-05 36.4395 0Z" fill="white"/>
+      </svg>
+    </div>
+    <div class="t-right">
+      <div class="t-item">BRAND</div>
+      <div class="t-status" id="statusChip">
+        <span class="t-led"></span>
+        <span id="statusTxt">SEARCHING FACE</span>
+      </div>
+      <div class="t-item" id="tClock"></div>
+    </div>
+  </div>
+</nav>
+
+<!-- Side arrows -->
+<div class="nav-arrow" id="prev">
+  <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+</div>
+<div class="nav-arrow" id="next">
+  <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+</div>
+
+<!-- Large product name -->
+<div class="product-title-wrap">
+  <div id="mName">APHELION&nbsp;&nbsp;XX01</div>
+</div>
+
+<!-- BOTTOM BAR -->
+<div class="bottom-bar">
+  <div class="b-info">
+    <div class="info-pair">
+      <span class="i-label">ITEM</span>
+      <span class="i-val" id="bItemCode">XX01__APHELION</span>
+    </div>
+    <div class="info-pair">
+      <span class="i-label">MATERIAL</span>
+      <span class="i-val" id="bMaterial">CARBON FIBER</span>
+    </div>
+    <div class="info-pair">
+      <span class="i-label">LENS</span>
+      <span class="i-val" id="bLens">MONOCHROMATIC</span>
+    </div>
+    <div class="info-pair">
+      <span class="i-label">UNIT PRICE</span>
+      <span class="i-val" id="bPrice">$470</span>
+    </div>
+  </div>
+
+  <button class="b-btn">INSIGHT +</button>
+  <button class="b-btn">THE DESIGNER +</button>
+
+  <div class="b-models">
+    <div class="models-label-wrap">
+      <span class="models-txt">MORE MODELS</span>
+      <span class="models-count">02</span>
+    </div>
+    <div class="model-chips" id="modelChips"></div>
+  </div>
+
+  <button class="b-photo" id="shot">PHOTO CAPTURE +</button>
+</div>
+
+<!-- FIT PANEL (press T to toggle) -->
+<div id="tune">
+  <h3>FIT TUNING</h3>
+  <label>SCALE <span id="vS"></span></label>
+  <input type="range" id="tS" min="0.7" max="1.5" step="0.01">
+  <label>VERTICAL <span id="vY"></span></label>
+  <input type="range" id="tY" min="-0.25" max="0.25" step="0.005">
+  <label>DEPTH <span id="vZ"></span></label>
+  <input type="range" id="tZ" min="-0.35" max="0.35" step="0.005">
+  <div class="chk"><input type="checkbox" id="tF"> <label for="tF">FLIP 180°</label></div>
+  <div class="chk"><input type="checkbox" id="tO" checked> <label for="tO">HEAD OCCLUSION</label></div>
+  <button class="t-reset" id="tReset">RESET</button>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { FaceLandmarker, FilesetResolver }
+  from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs';
+
+/* ═══════════════════ CONFIG ═══════════════════ */
+const MODELS = [
+  { url: 'models/glasses1.glb', name: 'APHELION  XX01',   itemCode: 'XX01__APHELION',  material: 'CARBON FIBER', lens: 'MONOCHROMATIC', price: '$470', tint: null     },
+  { url: 'models/glasses1.glb', name: 'APHELION  XX01-G', itemCode: 'XX01G__APHELION', material: 'CARBON FIBER', lens: 'GRADIENT',      price: '$470', tint: 0xC49A2A },
+  { url: 'models/glasses1.glb', name: 'APHELION  XX01-D', itemCode: 'XX01D__APHELION', material: 'CARBON FIBER', lens: 'POLARIZED',     price: '$470', tint: 0x607888 },
+];
+const PLANE_D     = 55;
+const CAM_FOV     = 50;
+const FIT_DEFAULT = { s: 1.06, y: 0.0, z: 0.0, flip: false };
+
+const LM_BRIDGE  = 168;
+const LM_LEFT    = 127;
+const LM_RIGHT   = 356;
+const LM_EYE_L   = 159;
+const LM_EYE_R   = 386;
+const LM_TOP     = 10;
+const LM_CHIN    = 152;
+
+/* ─── distance thresholds (normalized cheekbone span) ─── */
+/* face ~14 cm, webcam FOV ~65° horiz → D_cm ≈ 14 / (normW * 1.28) */
+/* 60cm → normW≈0.182 | 80cm → normW≈0.137 | 100cm → normW≈0.109  */
+const DIST_MAX_NORM = 0.182;  // closer than 60cm  → hide glasses
+const DIST_MIN_NORM = 0.109;  // farther than 100cm → hide glasses
+
+/* ═══════════════════ THREE ═══════════════════ */
+const video   = document.getElementById('video');
+const stageEl = document.getElementById('stage');
+const overlay = document.getElementById('overlay');
+const overlayMsg = document.getElementById('overlaymsg');
+const setBar = p => document.getElementById('loadbar').style.width = p + '%';
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x000000, 0);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.domElement.id = 'gl';
+stageEl.appendChild(renderer.domElement);
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(CAM_FOV, 1, 1, 500);
+camera.position.set(0, 0, 0);
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+const key = new THREE.DirectionalLight(0xffffff, 1.6);
+key.position.set(0.5, 1, 1);
+scene.add(key);
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+const anchor = new THREE.Group();
+anchor.visible = false;
+scene.add(anchor);
+
+const occluder = new THREE.Mesh(
+  new THREE.SphereGeometry(0.5, 32, 24),
+  new THREE.MeshBasicMaterial({ colorWrite: false })
+);
+occluder.renderOrder = -1;
+anchor.add(occluder);
+
+const glassesSlots = [];
+
+/* ═══════════════════ FIT ═══════════════════ */
+let currentIdx = 0;
+const fits = MODELS.map((_, i) => {
+  try { return { ...FIT_DEFAULT, ...JSON.parse(localStorage.getItem('vto-fit-' + i) || '{}') }; }
+  catch { return { ...FIT_DEFAULT }; }
+});
+const saveFit = i => localStorage.setItem('vto-fit-' + i, JSON.stringify(fits[i]));
+
+let vw = 1280, vh = 720, dispW = 0, dispH = 0;
+
+/* ═══════════════════ LOAD ═══════════════════ */
+const gltfLoader = new GLTFLoader();
+
+function tintModel(root, hexColor) {
+  const tint = new THREE.Color(hexColor);
+  root.traverse(o => {
+    if (!o.isMesh || !o.material) return;
+    const isArr = Array.isArray(o.material);
+    const mats  = isArr ? o.material : [o.material];
+    const cloned = mats.map(m => { const c = m.clone(); c.color.multiply(tint); return c; });
+    o.material = isArr ? cloned : cloned[0];
+  });
+}
+
+function loadModel(cfg) {
+  return new Promise((res, rej) => gltfLoader.load(cfg.url, g => {
+    const model = g.scene;
+    if (cfg.tint != null) tintModel(model, cfg.tint);
+    const box    = new THREE.Box3().setFromObject(model);
+    const size   = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const inner  = new THREE.Group();
+    inner.add(model);
+    const s = 1 / size.x;
+    inner.scale.setScalar(s);
+    inner.position.copy(center).multiplyScalar(-s);
+    const slot = new THREE.Group();
+    slot.add(inner);
+    slot.userData.halfDepth = size.z / (2 * size.x);
+    slot.visible = false;
+    res(slot);
+  }, undefined, rej));
+}
+
+async function initTracker() {
+  const fileset = await FilesetResolver.forVisionTasks(
+    'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');
+  const opts = delegate => ({
+    baseOptions: {
+      modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
+      delegate,
+    },
+    runningMode: 'VIDEO',
+    numFaces: 1,
+  });
+  try { return await FaceLandmarker.createFromOptions(fileset, opts('GPU')); }
+  catch (e) {
+    console.warn('GPU delegate failed, falling back to CPU', e);
+    return FaceLandmarker.createFromOptions(fileset, opts('CPU'));
+  }
+}
+
+async function initCamera() {
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+    audio: false,
+  });
+  video.srcObject = stream;
+  await new Promise(r => video.onloadedmetadata = r);
+  await video.play();
+}
+
+let landmarker = null;
+let progress = 0;
+const bump = () => setBar(Math.min(progress += 25, 95));
+
+async function init() {
+  MODELS.forEach((_, i) => localStorage.removeItem('vto-fit-' + i));
+  try {
+    const [slots, lm] = await Promise.all([
+      Promise.all(MODELS.map(m => loadModel(m).then(s => (bump(), s)))),
+      initTracker().then(l => (bump(), l)),
+    ]);
+    slots.forEach(s => { anchor.add(s); glassesSlots.push(s); });
+    landmarker = lm;
+    await initCamera();
+    setBar(100);
+    layout();
+    selectModel(0);
+    overlay.classList.add('done');
+    requestAnimationFrame(loop);
+  } catch (err) {
+    console.error(err);
+    overlayMsg.innerHTML = (err.name === 'NotAllowedError' || err.name === 'NotFoundError')
+      ? 'CAMERA ACCESS DENIED OR UNAVAILABLE.<br>ALLOW CAMERA PERMISSION AND RELOAD.'
+      : 'INIT ERROR — SEE CONSOLE.<br>' + String(err).slice(0, 120);
+  }
+}
+
+/* ═══════════════════ LAYOUT ═══════════════════ */
+function layout() {
+  vw = video.videoWidth || 1280; vh = video.videoHeight || 720;
+  const W = window.innerWidth, H = window.innerHeight;
+  const sc = Math.max(W / vw, H / vh);
+  dispW = vw * sc; dispH = vh * sc;
+  const left = (W - dispW) / 2, top = (H - dispH) / 2;
+  for (const el of [video, renderer.domElement]) {
+    el.style.width = dispW + 'px'; el.style.height = dispH + 'px';
+    el.style.left = left + 'px'; el.style.top = top + 'px';
+  }
+  renderer.setSize(dispW, dispH, false);
+  camera.aspect = vw / vh;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', layout);
+
+/* ═══════════════════ FACE MAPPING ═══════════════════ */
+const tanHalf = Math.tan(THREE.MathUtils.degToRad(CAM_FOV / 2));
+function lmToWorld(lm, out) {
+  const halfW = tanHalf * camera.aspect * PLANE_D;
+  out.set(
+    (lm.x * 2 - 1) * halfW,
+    -(lm.y * 2 - 1) * tanHalf * PLANE_D,
+    -lm.z * halfW * 2
+  );
+  return out;
+}
+
+const sPos = new THREE.Vector3();
+const sQuat = new THREE.Quaternion();
+let sScale = 0, hasPose = false, lastSeen = 0;
+
+const _p = new THREE.Vector3(), _l = new THREE.Vector3(), _r = new THREE.Vector3();
+const _top = new THREE.Vector3(), _chin = new THREE.Vector3();
+const _eyeL = new THREE.Vector3(), _eyeR = new THREE.Vector3(), _eyeMid = new THREE.Vector3();
+const _vR = new THREE.Vector3(), _vU = new THREE.Vector3(), _vF = new THREE.Vector3();
+const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _off = new THREE.Vector3();
+const _btoe = new THREE.Vector3();
+
+/* ═══════════════════ DISTANCE UI ═══════════════════ */
+const distGuide  = document.getElementById('distGuide');
+const distMsg    = document.getElementById('distMsg');
+const distVal    = document.getElementById('distVal');
+const distCursor = document.getElementById('distCursor');
+
+function updateDistGuide(normW) {
+  const estCm  = Math.round(14 / (normW * 1.28));
+  const inRange = normW <= DIST_MAX_NORM && normW >= DIST_MIN_NORM;
+
+  if (inRange) {
+    distGuide.classList.add('hidden');
+    return true;
+  }
+
+  distGuide.classList.remove('hidden');
+  distMsg.textContent = normW > DIST_MAX_NORM ? 'STEP BACK' : 'STEP CLOSER';
+  distVal.textContent = '~' + estCm + ' CM';
+
+  /* cursor on bar: map 20-150 cm → 0-100 % */
+  const pct = Math.max(0, Math.min(100, (estCm - 20) / 130 * 100));
+  distCursor.style.left = pct + '%';
+
+  return false;
+}
+
+/* ═══════════════════ LOOP ═══════════════════ */
+let lastT = performance.now(), lastVideoTime = -1;
+
+function loop(now) {
+  requestAnimationFrame(loop);
+  const dt = Math.min((now - lastT) / 1000, 0.1); lastT = now;
+
+  if (landmarker && video.currentTime !== lastVideoTime) {
+    lastVideoTime = video.currentTime;
+    const res = landmarker.detectForVideo(video, now);
+    const lms = res.faceLandmarks && res.faceLandmarks[0];
+
+    if (lms) {
+      lastSeen = now;
+      const fit = fits[currentIdx];
+
+      lmToWorld(lms[LM_BRIDGE], _p);
+      lmToWorld(lms[LM_LEFT],   _l);   lmToWorld(lms[LM_RIGHT], _r);
+      lmToWorld(lms[LM_TOP],    _top); lmToWorld(lms[LM_CHIN],  _chin);
+      lmToWorld(lms[LM_EYE_L],  _eyeL); lmToWorld(lms[LM_EYE_R], _eyeR);
+
+      const faceW = _l.distanceTo(_r);
+
+      _vR.subVectors(_r, _l).normalize();
+      _vU.subVectors(_top, _chin).normalize();
+      _vF.crossVectors(_vR, _vU).normalize();
+      _vU.crossVectors(_vF, _vR).normalize();
+      _m.makeBasis(_vR, _vU, _vF);
+      _q.setFromRotationMatrix(_m);
+      _p.z -= PLANE_D;
+
+      _eyeMid.addVectors(_eyeL, _eyeR).multiplyScalar(0.5);
+      _eyeMid.z = _p.z;
+      _btoe.subVectors(_eyeMid, _p);
+      const autoY = _btoe.dot(_vU);
+
+      const hd = glassesSlots[currentIdx] ? (glassesSlots[currentIdx].userData.halfDepth || 0.14) : 0.14;
+      const autoZ = -(hd * faceW * fit.s * 0.3);
+
+      _off.set(0, autoY + fit.y * faceW, autoZ + fit.z * faceW).applyQuaternion(_q);
+      _p.add(_off);
+
+      const targetScale = faceW * fit.s;
+      const kP = 1 - Math.exp(-dt * 22), kR = 1 - Math.exp(-dt * 16), kS = 1 - Math.exp(-dt * 12);
+      if (!hasPose) { sPos.copy(_p); sQuat.copy(_q); sScale = targetScale; hasPose = true; }
+      else { sPos.lerp(_p, kP); sQuat.slerp(_q, kR); sScale += (targetScale - sScale) * kS; }
+
+      const normW = lms[LM_RIGHT].x - lms[LM_LEFT].x;
+      const distOk = updateDistGuide(normW);
+
+      anchor.position.copy(sPos);
+      anchor.quaternion.copy(sQuat);
+      anchor.scale.setScalar(sScale);
+      anchor.visible = distOk;
+      if (!distOk) hasPose = false;
+
+      const statusChip = document.getElementById('statusChip');
+      statusChip.classList.toggle('ok', distOk);
+      document.getElementById('statusTxt').textContent = distOk ? 'FACE LOCKED' : 'ADJUST DISTANCE';
+    }
+  }
+
+  if (now - lastSeen > 350) {
+    anchor.visible = false; hasPose = false;
+    const statusChip = document.getElementById('statusChip');
+    statusChip.classList.remove('ok');
+    document.getElementById('statusTxt').textContent = 'SEARCHING FACE';
+    distGuide.classList.add('hidden');
+  }
+
+  renderer.render(scene, camera);
+}
+
+/* ═══════════════════ MODEL SELECT ═══════════════════ */
+function scrambleText(el, finalText) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_';
+  let frame = 0;
+  const total = 22;
+  const iv = setInterval(() => {
+    frame++;
+    const result = [];
+    for (let i = 0; i < finalText.length; i++) {
+      const ch = finalText[i];
+      if (ch === ' ') { result.push(ch); continue; }
+      result.push(frame / total > i / finalText.length
+        ? ch : chars[(Math.random() * chars.length) | 0]);
+    }
+    el.textContent = result.join('');
+    if (frame >= total) { el.textContent = finalText; clearInterval(iv); }
+  }, 38);
+}
+
+function buildModelChips(activeIdx) {
+  const container = document.getElementById('modelChips');
+  container.innerHTML = '';
+  MODELS.forEach((m, i) => {
+    if (i === activeIdx) return;
+    const chip = document.createElement('div');
+    chip.className = 'model-chip';
+    chip.textContent = m.itemCode;
+    chip.dataset.idx = i;
+    chip.addEventListener('click', () => selectModel(i));
+    container.appendChild(chip);
+  });
+}
+
+function selectModel(i) {
+  currentIdx = ((i % MODELS.length) + MODELS.length) % MODELS.length;
+  glassesSlots.forEach((s, j) => s.visible = j === currentIdx);
+  applyFit();
+  const cfg = MODELS[currentIdx];
+  scrambleText(document.getElementById('mName'), cfg.name);
+  document.getElementById('bItemCode').textContent = cfg.itemCode;
+  document.getElementById('bMaterial').textContent = cfg.material;
+  document.getElementById('bLens').textContent     = cfg.lens;
+  document.getElementById('bPrice').textContent    = cfg.price;
+  buildModelChips(currentIdx);
+  syncTunePanel();
+}
+
+function applyFit() {
+  const fit  = fits[currentIdx];
+  const slot = glassesSlots[currentIdx];
+  if (slot) slot.rotation.y = fit.flip ? Math.PI : 0;
+  occluder.scale.set(1.18, 1.5, 1.25);
+  occluder.position.set(0, -0.05, -0.62);
+}
+
+/* ═══════════════════ TUNE PANEL ═══════════════════ */
+const tune = document.getElementById('tune');
+const tS = document.getElementById('tS'), tY = document.getElementById('tY'),
+      tZ = document.getElementById('tZ'), tF = document.getElementById('tF'),
+      tO = document.getElementById('tO');
+
+function syncTunePanel() {
+  const f = fits[currentIdx];
+  tS.value = f.s; tY.value = f.y; tZ.value = f.z; tF.checked = f.flip;
+  document.getElementById('vS').textContent = (+f.s).toFixed(2);
+  document.getElementById('vY').textContent = (+f.y).toFixed(3);
+  document.getElementById('vZ').textContent = (+f.z).toFixed(3);
+}
+function onTune() {
+  const f = fits[currentIdx];
+  f.s = +tS.value; f.y = +tY.value; f.z = +tZ.value; f.flip = tF.checked;
+  saveFit(currentIdx); applyFit(); syncTunePanel();
+}
+[tS, tY, tZ, tF].forEach(el => el.addEventListener('input', onTune));
+tO.addEventListener('input', () => occluder.visible = tO.checked);
+document.getElementById('tReset').addEventListener('click', () => {
+  fits[currentIdx] = { ...FIT_DEFAULT }; saveFit(currentIdx); applyFit(); syncTunePanel();
+});
+
+/* ═══════════════════ INPUT ═══════════════════ */
+document.getElementById('next').addEventListener('click', () => selectModel(currentIdx + 1));
+document.getElementById('prev').addEventListener('click', () => selectModel(currentIdx - 1));
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space' || e.code === 'ArrowRight') { e.preventDefault(); selectModel(currentIdx + 1); }
+  if (e.code === 'ArrowLeft') { e.preventDefault(); selectModel(currentIdx - 1); }
+  if (e.code === 'KeyT') tune.classList.toggle('open');
+});
+
+/* ═══════════════════ PHOTO CAPTURE ═══════════════════ */
+document.getElementById('shot').addEventListener('click', () => {
+  const c = document.createElement('canvas');
+  c.width = vw; c.height = vh;
+  const ctx = c.getContext('2d');
+  ctx.translate(c.width, 0); ctx.scale(-1, 1);
+  ctx.drawImage(video, 0, 0, c.width, c.height);
+  ctx.drawImage(renderer.domElement, 0, 0, c.width, c.height);
+  const a = document.createElement('a');
+  a.download = 'tryon-' + MODELS[currentIdx].itemCode + '.png';
+  a.href = c.toDataURL('image/png');
+  a.click();
+  const flash = document.getElementById('flash');
+  flash.style.transition = 'none'; flash.style.opacity = 0.85;
+  requestAnimationFrame(() => { flash.style.transition = 'opacity .4s'; flash.style.opacity = 0; });
+});
+
+/* ═══════════════════ CLOCK ═══════════════════ */
+const clockEl = document.getElementById('tClock');
+function updateClock() {
+  const now = new Date();
+  clockEl.textContent = [now.getHours(), now.getMinutes(), now.getSeconds()]
+    .map(n => String(n).padStart(2, '0')).join(':');
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+init();
+</script>
+</body>
+</html>

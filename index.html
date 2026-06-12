@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EYEWEAR // PARTICLE SHIFT</title>
+<style>
+  @font-face {
+    font-family: 'Macan Mono Trial';
+    src: url('fonts/Macan-Mono-Trial-Regular.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: 'Macan Mono Trial';
+    src: url('fonts/Macan-Mono-Trial-Light.otf') format('opentype');
+    font-weight: 300;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: 'Macan Mono Trial';
+    src: url('fonts/Macan-Mono-Trial-Bold.otf') format('opentype');
+    font-weight: 700;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: 'Macan Mono Stencil Trial';
+    src: url('fonts/Macan-Mono-Stencil-Trial-Light.otf') format('opentype');
+    font-weight: 300;
+    font-style: normal;
+  }
+
+  :root { --accent: #FF6200; }
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; background: #070707; }
+  body { font-family: 'Macan Mono Trial', monospace; color: #fff; }
+  canvas { display: block; position: fixed; inset: 0; z-index: 1; }
+
+  .vignette {
+    position: fixed; inset: 0; pointer-events: none; z-index: 2;
+    background: radial-gradient(ellipse 80% 70% at 50% 48%, transparent 40%, rgba(0,0,0,.65) 100%);
+  }
+  .noise {
+    position: fixed; inset: 0; pointer-events: none; z-index: 2; opacity: .025; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ─── TOP BAR ─── */
+  .top-bar {
+    position: fixed;
+    top: 12px;
+    left: 10px;
+    right: 10px;
+    height: 36px;
+    background: rgba(255,255,255,0.16);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    pointer-events: auto;
+  }
+  .top-bar-inner {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    height: 16px;
+  }
+  .t-left, .t-right {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: clamp(10px, 2vw, 28px);
+  }
+  .t-right { justify-content: flex-end; }
+  .t-item {
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 16px;
+    color: #fff;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .t-item--shop {
+    background: #000;
+    padding: 0 10px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+  }
+  .t-glasses {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .t-bag {
+    position: relative;
+    padding-right: 14px;
+  }
+  .t-bag-count {
+    position: absolute;
+    top: -8px;
+    right: 0;
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 8px;
+    line-height: 1;
+    color: #fff;
+    opacity: 0.5;
+  }
+
+  /* ─── SIDE ARROWS ─── */
+  .nav-arrow {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    cursor: pointer;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.03);
+    transition: border-color 0.3s, background 0.3s;
+    pointer-events: auto;
+  }
+  .nav-arrow:hover { border-color: rgba(255,255,255,0.28); background: rgba(255,255,255,0.08); }
+  .nav-arrow svg { width: 18px; height: 18px; stroke: rgba(255,255,255,0.6); stroke-width: 1.5; fill: none; }
+  #prev { left: 18px; }
+  #next { right: 18px; }
+
+  /* ─── PRODUCT NAME (large, Macan Mono Stencil) ─── */
+  .product-title-wrap {
+    position: fixed;
+    left: 20px;
+    bottom: 58px;
+    z-index: 10;
+    pointer-events: none;
+  }
+  #mName {
+    font-family: 'Macan Mono Stencil Trial', monospace;
+    font-size: clamp(22px, 3.2vw, 52px);
+    font-weight: 300;
+    letter-spacing: 0.10em;
+    color: #fff;
+    text-transform: uppercase;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  /* ─── BOTTOM BAR ─── */
+  .bottom-bar {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    height: 36px;
+    z-index: 10;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: clamp(4px, 0.6vw, 11px);
+    pointer-events: auto;
+  }
+
+  /* Left info panel */
+  .b-info {
+    flex: 1 1 auto;
+    min-width: 0;
+    background: rgba(255,255,255,0.16);
+    height: 36px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 10px clamp(8px, 1.2vw, 20px);
+    gap: clamp(6px, 1.2vw, 22px);
+  }
+  .info-pair {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: clamp(8px, 1.6vw, 32px);
+    flex-shrink: 1;
+  }
+  .i-label {
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 16px;
+    color: #fff;
+    white-space: nowrap;
+  }
+  .i-val {
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 16px;
+    color: rgba(255,255,255,0.5);
+    white-space: nowrap;
+    text-transform: uppercase;
+    min-width: 0;
+  }
+
+  /* Shared action button style */
+  .b-btn {
+    flex: 0 0 auto;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    padding: 14px clamp(10px, 2.2vw, 50px) 14px 10px;
+    background: rgba(255,255,255,0.14);
+    backdrop-filter: blur(7px);
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: #fff;
+    border: none;
+    outline: none;
+    transition: background 0.25s;
+    user-select: none;
+  }
+  .b-btn:hover { background: rgba(255,255,255,0.22); }
+
+  /* MORE MODELS panel */
+  .b-models {
+    flex: 0 0 auto;
+    height: 36.25px;
+    display: flex;
+    align-items: center;
+    padding: 9px clamp(6px, 0.7vw, 10px);
+    gap: clamp(6px, 0.7vw, 10px);
+    background: rgba(255,255,255,0.14);
+    backdrop-filter: blur(7px);
+    cursor: default;
+    border: none;
+    outline: none;
+  }
+  .models-label-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .models-txt {
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: #fff;
+    white-space: nowrap;
+  }
+  .models-count {
+    position: absolute;
+    top: -7px;
+    right: -14px;
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 8px;
+    line-height: 1;
+    color: #fff;
+    opacity: 0.5;
+  }
+  .model-chips {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 18px;
+  }
+  .model-chip {
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    color: rgba(255,255,255,0.45);
+    white-space: nowrap;
+    cursor: pointer;
+    padding: 2px 6px;
+    border: 1px solid rgba(255,255,255,0.15);
+    transition: color 0.25s, border-color 0.25s;
+    text-transform: uppercase;
+  }
+  .model-chip:hover {
+    color: #fff;
+    border-color: rgba(255,255,255,0.45);
+  }
+
+  /* VIRTUAL TRY-ON — orange */
+  .b-tryon {
+    flex: 0 0 auto;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px clamp(10px, 2.2vw, 50px) 14px 10px;
+    background: #FF6200;
+    backdrop-filter: blur(7px);
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: #fff;
+    border: none;
+    outline: none;
+    text-decoration: none;
+    transition: filter 0.25s;
+    user-select: none;
+  }
+  .b-tryon:hover { filter: brightness(1.15); }
+
+  /* ADD TO BAG */
+  .b-bag {
+    flex: 0 0 auto;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    padding: 14px clamp(10px, 2.2vw, 50px) 14px 10px;
+    background: #fff;
+    backdrop-filter: blur(7px);
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: 'Macan Mono Trial', monospace;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: #fff;
+    mix-blend-mode: difference;
+    border: none;
+    outline: none;
+    transition: filter 0.25s;
+    user-select: none;
+  }
+  .b-bag:hover { filter: brightness(0.88); }
+
+  /* Loader */
+  #loader {
+    position: fixed; inset: 0; z-index: 30; background: #070707;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
+    transition: opacity .8s;
+  }
+  #loader.done { opacity: 0; pointer-events: none; }
+  .l-title { font-family: 'Macan Mono Trial', monospace; font-size: 11px; letter-spacing: .5em; color: #9aa3b5; }
+  .l-bar { width: 240px; height: 2px; background: rgba(255,255,255,.08); }
+  .l-bar i { display: block; height: 100%; width: 0%; background: var(--accent); box-shadow: 0 0 14px var(--accent); transition: width .25s; }
+  .l-pct { font-family: 'Macan Mono Trial', monospace; font-size: 10px; letter-spacing: .3em; color: #566; }
+</style>
+</head>
+<body>
+
+<div id="loader">
+  <div class="l-title">EYEWEAR&nbsp;/&nbsp;/&nbsp;PARTICLE&nbsp;SHIFT</div>
+  <div class="l-bar"><i id="loadbar"></i></div>
+  <div class="l-pct" id="loadpct">0%</div>
+</div>
+
+<div class="vignette"></div>
+<div class="noise"></div>
+
+<!-- TOP BAR -->
+<nav class="top-bar">
+  <div class="top-bar-inner">
+    <div class="t-left">
+      <div class="t-item t-item--shop">SHOP</div>
+      <div class="t-item">JOURNAL</div>
+      <div class="t-item">SEARCH</div>
+    </div>
+    <div class="t-glasses">
+      <svg width="47" height="10" viewBox="0 0 47 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M36.4395 0C42.0264 0 46.5557 2.09423 46.5557 4.67773C46.5557 7.26124 42.0264 9.35547 36.4395 9.35547C33.6911 9.35541 31.1991 8.84838 29.3763 8.02564C27.4947 7.17636 25.2334 6.30957 23.1689 6.30957C21.1971 6.30952 19.0824 7.13782 17.2954 7.97138C15.4634 8.82597 12.9239 9.35547 10.1162 9.35547C4.52925 9.35546 0 7.26124 0 4.67773C0 2.09423 4.52925 7.62687e-06 10.1162 0C12.9247 0 15.4651 0.529646 17.2975 1.38453C19.0838 2.21794 21.1978 3.04692 23.1689 3.04688C25.2327 3.04688 27.4933 2.17941 29.3742 1.33027C31.1974 0.50724 33.6903 5.62936e-05 36.4395 0Z" fill="white"/>
+      </svg>
+    </div>
+    <div class="t-right">
+      <div class="t-item">BRAND</div>
+      <div class="t-item" id="tClock"></div>
+    </div>
+  </div>
+</nav>
+
+<!-- Side arrows -->
+<div class="nav-arrow" id="prev">
+  <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+</div>
+<div class="nav-arrow" id="next">
+  <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+</div>
+
+<!-- Large product name (Macan Mono Stencil Light) -->
+<div class="product-title-wrap">
+  <div id="mName">APHELION&nbsp;&nbsp;XX01</div>
+</div>
+
+<!-- BOTTOM BAR -->
+<div class="bottom-bar">
+  <div class="b-info">
+    <div class="info-pair">
+      <span class="i-label">ITEM</span>
+      <span class="i-val" id="bItemCode">XX01__APHELION</span>
+    </div>
+    <div class="info-pair">
+      <span class="i-label">MATERIAL</span>
+      <span class="i-val" id="bMaterial">CARBON FIBER</span>
+    </div>
+    <div class="info-pair">
+      <span class="i-label">LENS</span>
+      <span class="i-val" id="bLens">MONOCHROMATIC</span>
+    </div>
+    <div class="info-pair">
+      <span class="i-label">UNIT PRICE</span>
+      <span class="i-val" id="bPrice">$470</span>
+    </div>
+  </div>
+
+  <button class="b-btn">INSIGHT +</button>
+  <button class="b-btn">THE DESIGNER +</button>
+
+  <!-- MORE MODELS: chips of the non-active models -->
+  <div class="b-models">
+    <div class="models-label-wrap">
+      <span class="models-txt">MORE MODELS</span>
+      <span class="models-count">02</span>
+    </div>
+    <div class="model-chips" id="modelChips"></div>
+  </div>
+
+  <a class="b-tryon" href="tryon.html">VIRTUAL TRY ON</a>
+
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
+import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+/* ═══════════════════ CONFIG ═══════════════════ */
+const MODELS = [
+  {
+    url:      'models/glasses1.glb',
+    name:     'APHELION  XX01',
+    itemCode: 'XX01__APHELION',
+    material: 'CARBON FIBER',
+    lens:     'MONOCHROMATIC',
+    price:    '$470',
+    accent:   0xFF6200,
+    tint:     null,
+  },
+  {
+    url:      'models/glasses1.glb',
+    name:     'APHELION  XX01-G',
+    itemCode: 'XX01G__APHELION',
+    material: 'CARBON FIBER',
+    lens:     'GRADIENT',
+    price:    '$470',
+    accent:   0xF5C030,
+    tint:     0xC49A2A,
+  },
+  {
+    url:      'models/glasses1.glb',
+    name:     'APHELION  XX01-D',
+    itemCode: 'XX01D__APHELION',
+    material: 'CARBON FIBER',
+    lens:     'POLARIZED',
+    price:    '$470',
+    accent:   0xB0B8C8,
+    tint:     0x607888,
+  },
+];
+const PARTICLES   = 30000;
+const SHIFT_MS    = 2600;
+const TARGET_SIZE = 2.4;
+
+/* ═══════════════════ GLSL ═══════════════════ */
+const PARTICLE_VERT = /* glsl */`
+uniform float uProgress;
+uniform float uTime;
+uniform float uSize;
+attribute vec3 aFrom;
+attribute vec3 aTo;
+attribute vec4 aRand;
+varying float vMid;
+varying float vT;
+varying float vRand;
+void main(){
+  float t = clamp((uProgress - aRand.w * 0.25) / 0.75, 0.0, 1.0);
+  float e = t * t * (3.0 - 2.0 * t);
+  vec3 p = mix(aFrom, aTo, e);
+  float mid = sin(t * 3.14159265);
+  p += vec3(aRand.x - 0.5, aRand.y - 0.5, aRand.z - 0.5) * mid * 0.08;
+  vec4 mv = modelViewMatrix * vec4(p, 1.0);
+  gl_Position = projectionMatrix * mv;
+  float sz = uSize * (0.8 + aRand.y * 1.2) * (mid + 0.001);
+  gl_PointSize = sz * (300.0 / -mv.z);
+  vMid = mid; vT = e; vRand = aRand.x;
+}`;
+
+const PARTICLE_FRAG = /* glsl */`
+uniform vec3 uColorA;
+uniform vec3 uColorB;
+varying float vMid;
+varying float vT;
+varying float vRand;
+void main(){
+  vec2 c = gl_PointCoord - 0.5;
+  float d = length(c);
+  if(d > 0.5) discard;
+  float core = smoothstep(0.5, 0.05, d);
+  vec3 col = mix(uColorA, uColorB, vT);
+  col += vec3(0.6) * pow(core, 4.0) * vRand;
+  float a = core * vMid;
+  gl_FragColor = vec4(col * (1.0 + vMid * 2.5), a);
+}`;
+
+/* ═══════════════════ RENDERER ═══════════════════ */
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x000000, 0);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.prepend(renderer.domElement);
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 60);
+camera.position.set(0, 0.35, 5.4);
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+const key = new THREE.DirectionalLight(0xffffff, 2.2);
+key.position.set(4, 6, 5);
+scene.add(key);
+const rim = new THREE.DirectionalLight(0x88aaff, 1.4);
+rim.position.set(-5, 2, -6);
+scene.add(rim);
+scene.add(new THREE.AmbientLight(0x404060, 0.6));
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping   = true;
+controls.dampingFactor   = 0.06;
+controls.enablePan       = false;
+controls.minDistance     = 3;
+controls.maxDistance     = 9;
+controls.maxPolarAngle   = Math.PI * 0.72;
+controls.minPolarAngle   = Math.PI * 0.22;
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+composer.addPass(new OutputPass());
+
+const stage = new THREE.Group();
+scene.add(stage);
+
+/* ═══════════════════ LOADING ═══════════════════ */
+const manager = new THREE.LoadingManager();
+manager.onProgress = (_, loaded, total) => {
+  const p = Math.round((loaded / total) * 100);
+  document.getElementById('loadbar').style.width = p + '%';
+  document.getElementById('loadpct').textContent  = p + '%';
+};
+const gltfLoader = new GLTFLoader(manager);
+const entries = [];
+
+function normalizeIntoGroup(model) {
+  const group  = new THREE.Group();
+  const box    = new THREE.Box3().setFromObject(model);
+  const size   = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const s = TARGET_SIZE / Math.max(size.x, size.y, size.z);
+  group.add(model);
+  group.scale.setScalar(s);
+  group.position.copy(center).multiplyScalar(-s);
+  return group;
+}
+
+function samplePoints(group, count) {
+  group.updateMatrixWorld(true);
+  const geos = [];
+  group.traverse(o => {
+    if (o.isMesh && o.geometry) {
+      let g = o.geometry.clone();
+      if (g.index) g = g.toNonIndexed();
+      g.applyMatrix4(o.matrixWorld);
+      for (const k of Object.keys(g.attributes)) if (k !== 'position') g.deleteAttribute(k);
+      g.morphAttributes = {};
+      geos.push(g);
+    }
+  });
+  const merged  = BufferGeometryUtils.mergeGeometries(geos, false);
+  const sampler = new MeshSurfaceSampler(new THREE.Mesh(merged)).build();
+  const arr = new Float32Array(count * 3);
+  const v   = new THREE.Vector3();
+  for (let i = 0; i < count; i++) {
+    sampler.sample(v);
+    arr[i*3] = v.x; arr[i*3+1] = v.y; arr[i*3+2] = v.z;
+  }
+  geos.forEach(g => g.dispose());
+  merged.dispose();
+  return arr;
+}
+
+function setGroupOpacity(group, opacity) {
+  group.traverse(o => {
+    if (!o.isMesh || !o.material) return;
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    mats.forEach(mat => { mat.transparent = true; mat.opacity = opacity; });
+  });
+}
+
+function tintGroup(group, hexColor) {
+  const tint = new THREE.Color(hexColor);
+  group.traverse(o => {
+    if (!o.isMesh || !o.material) return;
+    const isArr = Array.isArray(o.material);
+    const mats  = isArr ? o.material : [o.material];
+    const cloned = mats.map(m => { const c = m.clone(); c.color.multiply(tint); return c; });
+    o.material = isArr ? cloned : cloned[0];
+  });
+}
+
+/* ═══════════════════ PARTICLE SYSTEM ═══════════════════ */
+const pGeo = new THREE.BufferGeometry();
+pGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(PARTICLES * 3), 3));
+const aFrom = new THREE.BufferAttribute(new Float32Array(PARTICLES * 3), 3);
+const aTo   = new THREE.BufferAttribute(new Float32Array(PARTICLES * 3), 3);
+const aRand = new THREE.BufferAttribute(new Float32Array(PARTICLES * 4), 4);
+for (let i = 0; i < PARTICLES * 4; i++) aRand.array[i] = Math.random();
+pGeo.setAttribute('aFrom', aFrom);
+pGeo.setAttribute('aTo', aTo);
+pGeo.setAttribute('aRand', aRand);
+pGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 10);
+
+const pUniforms = {
+  uProgress: { value: 0 },
+  uTime:     { value: 0 },
+  uSize:     { value: 0.05 },
+  uColorA:   { value: new THREE.Color(MODELS[0].accent) },
+  uColorB:   { value: new THREE.Color(MODELS[1].accent) },
+};
+const pMat = new THREE.ShaderMaterial({
+  uniforms: pUniforms,
+  vertexShader: PARTICLE_VERT,
+  fragmentShader: PARTICLE_FRAG,
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+});
+const particles = new THREE.Points(pGeo, pMat);
+particles.visible = false;
+particles.frustumCulled = false;
+stage.add(particles);
+
+/* ═══════════════════ LOAD ALL ═══════════════════ */
+const loads = MODELS.map(cfg => new Promise((res, rej) => {
+  gltfLoader.load(cfg.url, gltf => res({ cfg, model: gltf.scene }), undefined, rej);
+}));
+
+Promise.all(loads).then(results => {
+  results.forEach(({ cfg, model }) => {
+    const group  = normalizeIntoGroup(model);
+    if (cfg.tint) tintGroup(group, cfg.tint);
+    const points = samplePoints(group, PARTICLES);
+    group.visible = false;
+    stage.add(group);
+    entries.push({ group, points, accent: cfg.accent, cfg });
+  });
+
+  entries[0].group.visible = true;
+  setGroupOpacity(entries[0].group, 1);
+  updateHud(0);
+
+  document.getElementById('loader').classList.add('done');
+}).catch(err => {
+  console.error(err);
+  document.querySelector('#loader .l-title').textContent = 'LOAD ERROR — serve this folder over http';
+});
+
+/* ═══════════════════ TRANSITION ═══════════════════ */
+let current = 0;
+let shift   = null;
+
+function switchTo(target) {
+  if (shift || !entries.length) return;
+  target = ((target % entries.length) + entries.length) % entries.length;
+  if (target === current) return;
+
+  const from = entries[current];
+  const to   = entries[target];
+
+  aFrom.array.set(from.points); aFrom.needsUpdate = true;
+  aTo.array.set(to.points);     aTo.needsUpdate   = true;
+  pUniforms.uColorA.value.set(from.accent);
+  pUniforms.uColorB.value.set(to.accent);
+
+  setGroupOpacity(to.group, 0);
+  to.group.visible = true;
+  particles.visible = true;
+  pUniforms.uProgress.value = 0;
+
+  shift = { from, to, start: performance.now(), target };
+  updateHud(target, true);
+}
+
+function updateShift(now) {
+  if (!shift) return;
+  const p = Math.min((now - shift.start) / SHIFT_MS, 1);
+
+  pUniforms.uProgress.value = p;
+
+  setGroupOpacity(shift.from.group, Math.max(0, 1 - p * 2));
+  setGroupOpacity(shift.to.group,   Math.max(0, (p - 0.5) * 2));
+
+  if (p >= 0.5) shift.from.group.visible = false;
+
+  if (p >= 1) {
+    shift.from.group.visible = false;
+    setGroupOpacity(shift.from.group, 1);
+    shift.to.group.visible = true;
+    setGroupOpacity(shift.to.group, 1);
+    particles.visible = false;
+    current = shift.target;
+    shift   = null;
+  }
+}
+
+/* ═══════════════════ HUD ═══════════════════ */
+function scrambleText(el, finalText) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_';
+  let frame = 0;
+  const total = 22;
+  const iv = setInterval(() => {
+    frame++;
+    const result = [];
+    for (let i = 0; i < finalText.length; i++) {
+      const ch = finalText[i];
+      if (ch === ' ') { result.push(ch); continue; }
+      result.push(frame / total > i / finalText.length
+        ? ch
+        : chars[(Math.random() * chars.length) | 0]);
+    }
+    el.textContent = result.join('');
+    if (frame >= total) { el.textContent = finalText; clearInterval(iv); }
+  }, 38);
+}
+
+function buildModelChips(activeIdx) {
+  const container = document.getElementById('modelChips');
+  container.innerHTML = '';
+  MODELS.forEach((m, i) => {
+    if (i === activeIdx) return;
+    const chip = document.createElement('div');
+    chip.className = 'model-chip';
+    chip.textContent = m.itemCode;
+    chip.dataset.idx = i;
+    chip.addEventListener('click', () => switchTo(i));
+    container.appendChild(chip);
+  });
+}
+
+function updateHud(idx, animate = false) {
+  const cfg = MODELS[idx];
+  const hex = '#' + cfg.accent.toString(16).padStart(6, '0');
+  document.documentElement.style.setProperty('--accent', hex);
+  /* push new target to background shader */
+  const _c = new THREE.Color(cfg.accent);
+  _bgCol.tr = _c.r; _bgCol.tg = _c.g; _bgCol.tb = _c.b;
+
+  const nameEl  = document.getElementById('mName');
+  const itemEl  = document.getElementById('bItemCode');
+  const matEl   = document.getElementById('bMaterial');
+  const lensEl  = document.getElementById('bLens');
+  const priceEl = document.getElementById('bPrice');
+
+  if (animate) {
+    scrambleText(nameEl, cfg.name);
+    scrambleText(itemEl, cfg.itemCode);
+    setTimeout(() => {
+      matEl.textContent   = cfg.material;
+      lensEl.textContent  = cfg.lens;
+      priceEl.textContent = cfg.price;
+    }, 400);
+  } else {
+    nameEl.textContent  = cfg.name;
+    itemEl.textContent  = cfg.itemCode;
+    matEl.textContent   = cfg.material;
+    lensEl.textContent  = cfg.lens;
+    priceEl.textContent = cfg.price;
+  }
+
+  buildModelChips(idx);
+}
+
+/* ═══════════════════ INPUT ═══════════════════ */
+document.getElementById('next').addEventListener('click', () => switchTo(current + 1));
+document.getElementById('prev').addEventListener('click', () => switchTo(current - 1));
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space' || e.code === 'ArrowRight') { e.preventDefault(); switchTo(current + 1); }
+  if (e.code === 'ArrowLeft') { e.preventDefault(); switchTo(current - 1); }
+});
+
+/* ═══════════════════ LOOP ═══════════════════ */
+const clock = new THREE.Clock();
+
+function tick() {
+  requestAnimationFrame(tick);
+  const dt = clock.getDelta();
+  const t  = clock.getElapsedTime();
+
+  stage.rotation.y += dt * 0.25;
+  stage.position.y  = Math.sin(t * 0.8) * 0.06;
+  pUniforms.uTime.value = t;
+
+  updateShift(performance.now());
+  controls.update();
+  composer.render();
+}
+tick();
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
+});
+
+const clockEl = document.getElementById('tClock');
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  const s = String(now.getSeconds()).padStart(2, '0');
+  clockEl.textContent = `${h}:${m}:${s}`;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+/* shared accent color for the dithered background — lerped each frame */
+const _bgCol = { r: 1.0, g: 0.384, b: 0.0, tr: 1.0, tg: 0.384, tb: 0.0 };
+
+/* ═══════════════════ DITHERED BACKGROUND ═══════════════════ */
+(function () {
+  const cvs = document.createElement('canvas');
+  cvs.style.cssText = 'position:fixed;inset:0;z-index:0;pointer-events:none;';
+  document.body.insertBefore(cvs, document.body.firstChild);
+
+  const gl = cvs.getContext('webgl') || cvs.getContext('experimental-webgl');
+  if (!gl) return;
+
+  const compile = (type, src) => {
+    const sh = gl.createShader(type);
+    gl.shaderSource(sh, src); gl.compileShader(sh); return sh;
+  };
+
+  /* simplex noise — renamed internals to avoid any scope collision */
+  const NOISE = `
+vec3 _m3(vec3 x){return x-floor(x*(1./289.))*289.;}
+vec4 _m4(vec4 x){return x-floor(x*(1./289.))*289.;}
+vec4 _pe(vec4 x){return _m4(((x*34.)+1.)*x);}
+vec4 _ti(vec4 r){return 1.79284291400159-0.85373472095314*r;}
+float sn(vec3 v){
+  const vec2 C=vec2(1./6.,1./3.);const vec4 D=vec4(0.,.5,1.,2.);
+  vec3 i=floor(v+dot(v,C.yyy));vec3 x0=v-i+dot(i,C.xxx);
+  vec3 g=step(x0.yzx,x0.xyz);vec3 l=1.-g;
+  vec3 i1=min(g.xyz,l.zxy);vec3 i2=max(g.xyz,l.zxy);
+  vec3 x1=x0-i1+C.xxx;vec3 x2=x0-i2+C.yyy;vec3 x3=x0-D.yyy;
+  i=_m3(i);
+  vec4 p=_pe(_pe(_pe(i.z+vec4(0.,i1.z,i2.z,1.))+i.y+vec4(0.,i1.y,i2.y,1.))+i.x+vec4(0.,i1.x,i2.x,1.));
+  float n_=.142857142857;vec3 ns=n_*D.wyz-D.xzx;
+  vec4 j=p-49.*floor(p*ns.z*ns.z);
+  vec4 x_=floor(j*ns.z);vec4 y_=floor(j-7.*x_);
+  vec4 x=x_*ns.x+ns.yyyy;vec4 y=y_*ns.x+ns.yyyy;vec4 h=1.-abs(x)-abs(y);
+  vec4 b0=vec4(x.xy,y.xy);vec4 b1=vec4(x.zw,y.zw);
+  vec4 s0=floor(b0)*2.+1.;vec4 s1=floor(b1)*2.+1.;vec4 sh=-step(h,vec4(0.));
+  vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy;vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
+  vec3 p0=vec3(a0.xy,h.x);vec3 p1=vec3(a0.zw,h.y);vec3 p2=vec3(a1.xy,h.z);vec3 p3=vec3(a1.zw,h.w);
+  vec4 nm=_ti(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
+  p0*=nm.x;p1*=nm.y;p2*=nm.z;p3*=nm.w;
+  vec4 m=max(.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.);m=m*m;
+  return 42.*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
+}`;
+
+  const VS = `attribute vec2 aPos;void main(){gl_Position=vec4(aPos,0.,1.);}`;
+
+  const FS = `
+precision mediump float;
+uniform float uTime;
+uniform vec2  uRes;
+uniform vec3  uColor;
+${NOISE}
+void main(){
+  float gs   = 9.0;
+  vec2  cell = floor(gl_FragCoord.xy / gs);
+  vec2  cuv  = fract(gl_FragCoord.xy / gs) - 0.5;
+
+  vec2  nuv  = cell / (uRes / gs);
+  nuv.x     *= uRes.x / uRes.y;
+
+  float n1 = sn(vec3(nuv * 2.6,       uTime * 0.08));
+  float n2 = sn(vec3(nuv * 5.2 + 3.7, uTime * 0.05));
+  float n3 = sn(vec3(nuv * 1.0 + 1.3, uTime * 0.035));
+
+  float val = n1 * 0.50 + n2 * 0.30 + n3 * 0.20;
+  val = val * 0.5 + 0.5;
+  val = pow(val, 3.2);            /* higher = more subtle, fewer dots */
+
+  float half_d = val * 0.38;
+  float lit    = step(max(abs(cuv.x), abs(cuv.y)), half_d);
+
+  vec3 col = mix(vec3(0.027), uColor * 0.45, lit);
+  gl_FragColor = vec4(col, 1.0);
+}`;
+
+  const prog = gl.createProgram();
+  gl.attachShader(prog, compile(gl.VERTEX_SHADER, VS));
+  gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FS));
+  gl.linkProgram(prog);
+  gl.useProgram(prog);
+
+  /* full-screen triangle */
+  const vBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, vBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
+  const aPosLoc = gl.getAttribLocation(prog, 'aPos');
+  gl.enableVertexAttribArray(aPosLoc);
+  gl.vertexAttribPointer(aPosLoc, 2, gl.FLOAT, false, 0, 0);
+
+  const locT = gl.getUniformLocation(prog, 'uTime');
+  const locR = gl.getUniformLocation(prog, 'uRes');
+  const locC = gl.getUniformLocation(prog, 'uColor');
+
+  function resize() {
+    cvs.width  = window.innerWidth;
+    cvs.height = window.innerHeight;
+    gl.viewport(0, 0, cvs.width, cvs.height);
+    gl.uniform2f(locR, cvs.width, cvs.height);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  const t0 = performance.now();
+  (function draw() {
+    requestAnimationFrame(draw);
+    gl.uniform1f(locT, (performance.now() - t0) * 0.001);
+    /* smooth lerp toward current model accent */
+    const lp = 0.022;
+    _bgCol.r += (_bgCol.tr - _bgCol.r) * lp;
+    _bgCol.g += (_bgCol.tg - _bgCol.g) * lp;
+    _bgCol.b += (_bgCol.tb - _bgCol.b) * lp;
+    gl.uniform3f(locC, _bgCol.r, _bgCol.g, _bgCol.b);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  })();
+})();
+</script>
+</body>
+</html>
